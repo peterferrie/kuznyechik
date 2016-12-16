@@ -28,7 +28,7 @@
 ;  POSSIBILITY OF SUCH DAMAGE.
 ;
 ; -----------------------------------------------
-; Kuznechik block cipher in x86 assembly
+; Kuznyechik block cipher in x86 assembly
 ;
 ; size: 662
 ;

@@ -27,7 +27,7 @@
   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE. */
 
-#include "kuznechik.h"
+#include "kuznyechik.h"
 
 // The S-Box from section 5.1.1
 const uint8_t kuz_pi[0x100] = {

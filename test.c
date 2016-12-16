@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <time.h>
-#include "kuznechik.h"
+#include "kuznyechik.h"
 
 // debug print state
 
