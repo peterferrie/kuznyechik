@@ -94,7 +94,6 @@ static uint8_t kuz_mul_gf256(uint8_t x, uint8_t y)
   return z;
 }
 
-void kuz_ltx (w128_t *w, int enc);
 static void kuz_lt (w128_t *w, int enc) {
   int     i, j;
   uint8_t x;
