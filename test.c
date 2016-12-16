@@ -1,5 +1,5 @@
 
-// test unit for kuzbechik from markku's code
+// test unit for kuznyechik ripped from markku's code
 // odzhan
 
 #include <stdio.h>
