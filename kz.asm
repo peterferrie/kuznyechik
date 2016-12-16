@@ -134,9 +134,9 @@ ksk_l2:
     
     ; memcpy (&kuz->k[(i >> 2)].b[0], &x.b[0], 32);
     pushad
-    add    ecx, ecx
-    shr    edx, 2
-    shl    edx, 4
+    add    ecx, ecx            ; ecx *= 2
+    shr    edx, 2              ; edx /= 4
+    shl    edx, 4              ; edx *= 16
     mov    esi, edi
     lea    edi, [ebp+edx]
     rep    movsb
@@ -270,9 +270,9 @@ kuz_subbytes:
 sbs_l0:
     mov    edi, esi
 sbs_l1:
-    lodsb
-    xlatb                    ; 
-    stosb                    
+    lodsb                    ; al = [esi]
+    xlatb                    ; al = [ebx+eax]
+    stosb                    ; [edi] = al
     loop   sbs_l1
     popad
     ret
@@ -314,9 +314,9 @@ kuz_enc_exit:
 ; edi = key context
 kuz_init:
     pushad
-    xor    eax, eax
-    cdq
-    inc    dh
+    xor    eax, eax          ; eax=0
+    cdq                      ; edx=0
+    inc    dh                ; edx=256
     add    edi, edx          ; edi = key->pi
     lea    esi, [edi+edx]    ; esi = key->pi_inv
     jmp    init_sbox
@@ -327,8 +327,8 @@ sbox_loop:
     xlatb                    ; al = kuz_pi[i]
     stosb                    ; key->pi[i] = al
     mov    [esi+eax], dl     ; key->pi_inv[kuz_pi[i]] = i
-    inc    dl
-    jnz    sbox_loop
+    inc    dl                ; i++
+    jnz    sbox_loop         ; i<256
     popad
     ret
 init_sbox:
