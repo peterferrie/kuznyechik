@@ -94,6 +94,14 @@ static uint8_t kuz_mul_gf256(uint8_t x, uint8_t y)
   return z;
 }
 
+/*
+uint8_t gf_mul2 (uint8_t x, uint8_t y) {
+  uint8_t t = x & 0x80;
+  
+  return ( (x ^ t ) << 1) ^ ( ( t >> 7) * 0xC3);
+}*/
+
+void kuz_ltx (w128_t *w, int enc);
 static void kuz_lt (w128_t *w, int enc) {
   int     i, j;
   uint8_t x;
@@ -151,51 +159,46 @@ static void kuz_subbytes(w128_t *w, kuz_key_t *key, int enc) {
 // key setup
 void kuz_setkey(kuz_key_t *kuz, const uint8_t key[32])
 {
-  int    i, j;
-  w128_t c, z;
-  w256_t x;
+  uint32_t i, j;
+  w128_t   c, z;
+  w256_t   x;
+
+  kuz_init(kuz);
+  
+  // copy key to context
+  memcpy (&kuz->k[0].b[0], key, 32);
 
   // copy key to local buffer
   memcpy (&x.b[0], key, 32);
-  // copy key to context
-  memcpy (&kuz->k[0].b[0], &x.b[0], 32);
-
-  for (i = 1; i <= 32; i++) {
-
+  
+  for (i=1; i<=32; i++) {
     // C Value
-    c.q[ 0] = 0;
-    c.q[ 1] = 0;
+    memset (&c.b[0], 0, 16);
     c.b[15] = i;    // load round in lsb
 
     kuz_lt(&c, KUZ_ENCRYPT);
 
-    for (j=0; j<4; j++) {
-      z.w[j] = x.w[j] ^ c.w[j];
+    for (j=0; j<16; j++) {
+      z.b[j] = x.b[j] ^ c.b[j];
     }
 
     kuz_subbytes(&z, kuz, KUZ_ENCRYPT);
     kuz_lt(&z, KUZ_ENCRYPT);
 
-    z.q[0] ^= x.q[2];
-    z.q[1] ^= x.q[3];
-
-    x.q[2] = x.q[0];
-    x.q[3] = x.q[1];
-
-    x.q[0] = z.q[0];
-    x.q[1] = z.q[1];
-
+    for (j=0; j<16; j++) {
+      z.b[j] ^= x.b[16+j];
+    }
+    
+    memcpy (&x.b[16], &x.b[0], 16);
+    memcpy (&x.b[0], &z.b[0], 16);
+    
     if ((i & 7) == 0) {
-      kuz->k[(i >> 2)    ].q[0] = x.q[0];
-      kuz->k[(i >> 2)    ].q[1] = x.q[1];
-
-      kuz->k[(i >> 2) + 1].q[0] = x.q[2];
-      kuz->k[(i >> 2) + 1].q[1] = x.q[3];
+      memcpy (&kuz->k[(i >> 2)].b[0], &x.b[0], 32);
     }
   }
 }
 
-// encrypt/decrypt a block - 8 bit way
+// encrypt/decrypt a block
 void kuz_encrypt(kuz_key_t *key, void *blk, int enc)
 {
   int    i, j;

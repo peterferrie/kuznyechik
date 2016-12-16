@@ -53,24 +53,22 @@ typedef union {
 
 // cipher context
 typedef struct {
-	w128_t k[10];		// round keys
+	w128_t k[16];		// 10 round keys, array increased to 16
   uint8_t pi[256];
   uint8_t pi_inv[256];
 } kuz_key_t;
 
 #ifdef USE_ASM
-#define kuz_init(x) kuz_init(x)
-#define kuz_setkey(x,y,z) kuz_setkey(x,y,z)
-#define kuz_encrypt(x,y,z) kuz_encrypt(x,y,z)
+#define kuz_setkey(x,y) kuz_setkeyx(x,y)
+#define kuz_encrypt(x,y,z) kuz_encryptx(x,y,z)
 #endif
+
+#define memset(x,y,z) __stosb(x,y,z)
+#define memcpy(x,y,z) __movsb(x,y,z)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// init lookup tables
-void kuz_init(kuz_key_t *key);
-void kuz_initx(kuz_key_t *key);
 
 void kuz_setkey(kuz_key_t *kuz, const uint8_t key[32]);
 void kuz_setkeyx(kuz_key_t *kuz, const uint8_t key[32]);

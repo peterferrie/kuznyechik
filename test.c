@@ -46,9 +46,7 @@ int main(int argc, char **argv)
 	uint32_t buf[0x100];
 	clock_t tim;
 
-	printf("Self-test:\n");
-	kuz_init(&key);
-			
+	printf("Self-test:\n");		
 	kuz_setkey(&key, testvec_key);	
   
 	for (i = 0; i < 10; i++) {	
