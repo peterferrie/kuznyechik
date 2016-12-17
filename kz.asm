@@ -83,25 +83,23 @@ ksk_l0:
     cmp    dl, 32
     ja     ksk_l3
     
-    push   edi               ; save x
+    mov    cl, 16
+    pushad                   ; save x
     mov    edi, esi
     xor    eax, eax
-    mov    cl, 16
     rep    stosb             ; memset (&c.b[0], 0, 16);
     mov    [esi+15], dl      ; c.b[15] = i;
     
     mov    edi, esi
     call   kuz_lt            ; kuz_lt(&c, KUZ_ENCRYPT);
-    pop    edi
+    popad
+
 ksk_l1:
-    mov    al, [edi+ecx]     ; al=x.b[j]
-    xor    al, [esi+ecx]     ; ^= c.b[j]
-    mov    [ebx+ecx], al 
-    inc    ecx
-    cmp    cl, 16    
-    jnz    ksk_l1
+    mov    al, [edi+ecx-1]   ; al=x.b[j]
+    xor    al, [esi+ecx-1]   ; ^= c.b[j]
+    mov    [ebx+ecx-1], al
+    loop   ksk_l1
     
-    xor    ecx, ecx
     xchg   esi, ebx     ; XCHG(c, z)
     xchg   edi, ebp     ; XCHG(x, kuz)
     call   kuz_subbytes ; kuz_subbytes(&z, kuz, KUZ_ENCRYPT);
@@ -135,10 +133,8 @@ ksk_l2:
     ; memcpy (&kuz->k[(i >> 2)].b[0], &x.b[0], 32);
     pushad
     add    ecx, ecx            ; ecx *= 2
-    shr    edx, 2              ; edx /= 4
-    shl    edx, 4              ; edx *= 16
     mov    esi, edi
-    lea    edi, [ebp+edx]
+    lea    edi, [ebp+edx*4]
     rep    movsb
     popad
     jmp    ksk_l0
@@ -182,77 +178,66 @@ w_l0:
 ; linear transformation
 ; esi = w
 ; ecx = enc
-kuz_lt:
-    pushad
-    jmp    lt_l6
 lt_l0:
-    pop    ebx
+    pop    edi
     push   16
-    pop    edi               ; 16 rounds
-    lea    ebp, [ebx+edi]    ; ebp = kuz_mul_gf256
+    pop    eax               ; 16 rounds
+    lea    ebp, [edi+eax]    ; ebp = kuz_mul_gf256
 lt_l1:
     pushad
-    xor    edi, edi
-    test   ecx, ecx
-    jnz    lt_l3
-    push   14
-    pop    edi
-    
-    mov    al, [esi+15]      ; al = w->b[15]
+    push   15
+    pop    edx
+    jecxz  lt_l2
+    cdq
+
 lt_l2:
-    mov    cl, [ebx+edi]     ; cl = kuz_lvec[i]
-    mov    dl, [esi+edi]     ; dl = w->b[i]
-    mov    [esi+edi+1], dl   ; w->b[i + 1] = dl
-    call   ebp
-    dec    edi
-    jns    lt_l2
-    
-    mov    [esi], al
-    jmp    lt_l5
+    mov    ah, [esi+edx]     ; ah = w->b[00 or 15]
+
 lt_l3:
-    mov    al, [esi]         ; al = w->b[0]
+    mov    bh, [edi+edx-1]     ; bh = kuz_lvec[i]
+    mov    al, [esi+edx-1]     ; al = w->b[i]
+    jecxz  lt_l4
+    mov    bh, [edi+edx]     ; bh = kuz_lvec[i]
+    mov    al, [esi+edx+1]   ; al = w->b[i+1]
+
 lt_l4:
-    mov    cl, [ebx+edi]     ; cl = kuz_lvec[i]
-    mov    dl, [esi+edi+1]   ; dl = w->b[i+1]
-    mov    [esi+edi], dl     ; w->b[i] = dl
+    mov    [esi+edx], al     ; w->b[i] = al
     call   ebp
-    inc    edi
-    cmp    edi, 15
-    jnz    lt_l4
-    
-    mov    [esi+15], al      ; w->b[15] = x
+    dec    edx
+    jecxz  lt_l5
+    inc    edx
+    inc    edx
+    cmp    edx, 15
+
 lt_l5:
+    jnz    lt_l3
+    mov    [esi+edx], ah     ; w->b[00 or 15] = x
     popad
-    dec    edi
+    dec    eax
     jnz    lt_l1
     popad
     ret
-lt_l6:
+kuz_lt:
+    pushad
     call   lt_l0
     db 0x94, 0x20, 0x85, 0x10 
     db 0xC2, 0xC0, 0x01, 0xFB
     db 0x01, 0xC0, 0xC2, 0x10
     db 0x85, 0x20, 0x94, 0x01
+
 ; poly multiplication 
 ; mod p(x) = x^8 + x^7 + x^6 + x + 1 
-kuz_mul_gf256:
-    push   eax
-    xor    eax, eax          ; z=0
-    jecxz  mgf_l3            ; while (y)
 mgf_l0:
-    test   cl, 1             ; if (y & 1)
-    je     mgf_l1
-    xor    al, dl            ; z ^= x
+    shr    bh, 1             ; if (y & 1), y >>= 1
+    jnc    mgf_l1
+    xor    ah, al            ; z ^= x
 mgf_l1:
-    add    dl, dl            ; x <<= 1
-    jnc    mgf_l2
-    xor    dl, 0xC3
-mgf_l2:
-    shr    ecx, 1            ; y >>= 1
+    add    al, al            ; if (x & 0x80), x <<= 1
+    jnc    kuz_mul_gf256
+    xor    al, 0xC3          ; x ^= 0xC3
+kuz_mul_gf256:
+    test   bh, bh            ; while (y)
     jnz    mgf_l0
-mgf_l3:
-    xor    byte[esp], al
-    pop    eax
     ret
     
 ; substitute bytes
@@ -263,11 +248,10 @@ kuz_subbytes:
     mov    dl, 255
     inc    edx
     lea    ebx, [edi+edx]    ; ebx = key->pi
-    test   ecx, ecx          ; KUZ_ENCRYPT?
-    mov    cl, 16
-    jz     sbs_l0
+    jecxz  sbs_l0            ; KUZ_ENCRYPT?
     add    ebx, edx          ; ebx = key->pi_inv
 sbs_l0:
+    mov    cl, 16
     mov    edi, esi
 sbs_l1:
     lodsb                    ; al = [esi]
@@ -281,45 +265,30 @@ load_func:
     lea    eax, [ebx + (kuz_lt - kuz_whiten)]
     lea    ebp, [eax + (kuz_subbytes - kuz_lt)]
     
-    jecxz  kuz_enc
+    jecxz  kde_l2
     xchg   eax, ebp
     mov    dl, KUZ_ROUNDS
-kuz_dec:
+    jmp    kde_l1
+kde_l0:
+    call   ebp ; kuz_lt or kuz_subbytes
+    call   eax ; kuz_subbytes or kuz_lt
+kde_l1:
     dec    edx
+kde_l2:
     call   ebx ; kuz_whiten
+    inc    ecx
     test   edx, edx
-    jz     kuz_enc_exit
-    
-    call   ebp ; kuz_lt
-    call   eax ; kuz_subbytes
-    
-    jmp    kuz_dec
-kuz_enc:
-    call   ebx ; kuz_whiten
-    
+    loop   kde_l3
     inc    edx
-    cmp    dl, KUZ_ROUNDS
-    jz     kuz_enc_exit
-    
-    call   ebp ; kuz_subbytes
-    call   eax ; kuz_lt
-    
-    jmp    kuz_enc
-    
-kuz_enc_exit:
+    inc    edx
+    cmp    dl, KUZ_ROUNDS+1
+kde_l3:
+    jnz    kde_l0
     popad
     ret
  
 ; initialize sbox tables 
 ; edi = key context
-kuz_init:
-    pushad
-    xor    eax, eax          ; eax=0
-    cdq                      ; edx=0
-    inc    dh                ; edx=256
-    add    edi, edx          ; edi = key->pi
-    lea    esi, [edi+edx]    ; esi = key->pi_inv
-    jmp    init_sbox
 load_sbox:
     pop    ebx               ; ebx = kuz_pi
 sbox_loop:
@@ -331,7 +300,12 @@ sbox_loop:
     jnz    sbox_loop         ; i<256
     popad
     ret
-init_sbox:
+
+kuz_init:
+    pushad
+    inc    dh                ; edx=256
+    add    edi, edx          ; edi = key->pi
+    lea    esi, [edi+edx]    ; esi = key->pi_inv
     call   load_sbox
 ; The S-Box from section 5.1.1
 kuz_pi:
