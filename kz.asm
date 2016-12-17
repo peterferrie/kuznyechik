@@ -30,7 +30,7 @@
 ; -----------------------------------------------
 ; Kuznyechik block cipher in x86 assembly
 ;
-; size: 662
+; size: 615
 ;
 ; global calls use cdecl convention
 ;
@@ -57,12 +57,12 @@ _kuz_setkeyx:
     mov    esi, [esp+32+8]   ; esi=key
     mov    ebp, edi
     
-    xor    eax, eax          ; eax=0
+    push   32                ; eax=32
+    pop    eax
     cdq                      ; edx=0
     call   kuz_init
     
-    push   32
-    pop    ecx
+    xchg   eax, ecx
     ; copy key to context
     pushad
     rep    movsb
@@ -182,11 +182,9 @@ lt_l0:
     pop    edi
     push   16
     pop    eax               ; 16 rounds
-    lea    ebp, [edi+eax]    ; ebp = kuz_mul_gf256
 lt_l1:
     pushad
-    push   15
-    pop    edx
+    mov    dl, 15
     jecxz  lt_l2
     cdq
 
@@ -202,7 +200,7 @@ lt_l3:
 
 lt_l4:
     mov    [esi+edx], al     ; w->b[i] = al
-    call   ebp
+    call   kuz_mul_gf256
     dec    edx
     jecxz  lt_l5
     inc    edx
