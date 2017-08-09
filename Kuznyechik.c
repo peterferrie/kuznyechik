@@ -193,7 +193,7 @@ void kuz_setkey(kuz_key_t *kuz, const uint8_t key[32])
 // encrypt/decrypt a block
 void kuz_encrypt(kuz_key_t *key, void *blk, int enc)
 {
-  int    i, j;
+  int    i;
   w128_t *x=(w128_t*)blk;
 
   if (enc==KUZ_ENCRYPT)

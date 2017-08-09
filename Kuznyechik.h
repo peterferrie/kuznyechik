@@ -32,6 +32,8 @@
 
 #include <stdint.h>
 
+#include "macros.h"
+
 #define KUZ_ENCRYPT 0
 #define KUZ_DECRYPT 1
 
@@ -57,14 +59,6 @@ typedef struct {
   uint8_t pi[256];
   uint8_t pi_inv[256];
 } kuz_key_t;
-
-#ifdef USE_ASM
-#define kuz_setkey(x,y) kuz_setkeyx(x,y)
-#define kuz_encrypt(x,y,z) kuz_encryptx(x,y,z)
-#endif
-
-#define memset(x,y,z) __stosb(x,y,z)
-#define memcpy(x,y,z) __movsb(x,y,z)
 
 #ifdef __cplusplus
 extern "C" {

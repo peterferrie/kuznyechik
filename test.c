@@ -40,11 +40,9 @@ int main(int argc, char **argv)
 		0x5A, 0x46, 0x8D, 0x42, 0xB9, 0xD4, 0xED, 0xCD
 	};
 	
-	int i, j, n;
+	int       i;
 	kuz_key_t key;
-	w128_t x;
-	uint32_t buf[0x100];
-	clock_t tim;
+	w128_t    x;
 
 	printf("Self-test:\n");		
 	kuz_setkey(&key, testvec_key);	
